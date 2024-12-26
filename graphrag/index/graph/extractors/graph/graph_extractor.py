@@ -124,7 +124,7 @@ class GraphExtractor:
         for doc_index, text in enumerate(texts):
             try:
                 # Invoke the entity extraction
-                result = await self._process_document(text, prompt_variables)
+                result = text # result = await self._process_document(text, prompt_variables)
                 source_doc_map[doc_index] = text
                 all_records[doc_index] = result
             except Exception as e:

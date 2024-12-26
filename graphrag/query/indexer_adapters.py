@@ -161,7 +161,7 @@ def read_indexer_entities(
         community_col="community",
         rank_col="degree",
         name_embedding_col=None,
-        description_embedding_col="description_embedding",
+        description_embedding_col="entity_description_embeddings",
         text_unit_ids_col="text_unit_ids",
     )
 

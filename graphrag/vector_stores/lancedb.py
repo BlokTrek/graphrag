@@ -53,10 +53,11 @@ class LanceDBVectorStore(BaseVectorStore):
         if len(data) == 0:
             data = None
 
+        N = 1536
         schema = pa.schema([
             pa.field("id", pa.string()),
             pa.field("text", pa.string()),
-            pa.field("vector", pa.list_(pa.float64())),
+            pa.field("vector", pa.list_(pa.float64(), N)),
             pa.field("attributes", pa.string()),
         ])
         # NOTE: If modifying the next section of code, ensure that the schema remains the same.

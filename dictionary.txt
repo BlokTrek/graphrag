@@ -71,6 +71,7 @@ semversioner
 mkdocs
 fnllm
 typer
+milvus
 
 # Library Methods
 iterrows

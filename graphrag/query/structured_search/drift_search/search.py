@@ -6,6 +6,7 @@
 import logging
 import time
 from collections.abc import AsyncGenerator
+from random import randint
 from typing import Any
 
 import tiktoken
@@ -37,6 +38,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         config: DRIFTSearchConfig | None = None,
         token_encoder: tiktoken.Encoding | None = None,
         query_state: QueryState | None = None,
+        llms: list[ChatOpenAI] | None = None,
     ):
         """
         Initialize the DRIFTSearch class.
@@ -57,9 +59,9 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         self.primer = DRIFTPrimer(
             config=self.config, chat_llm=llm, token_encoder=token_encoder
         )
-        self.local_search = self.init_local_search()
+        self.local_search = self.init_local_search(llms)
 
-    def init_local_search(self) -> LocalSearch:
+    def init_local_search(self, llms: list[ChatOpenAI]|None) -> list[LocalSearch]:
         """
         Initialize the LocalSearch object with parameters based on the DRIFT search configuration.
 
@@ -85,16 +87,17 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             "temperature": self.config.local_search_temperature,
             "response_format": {"type": "json_object"},
         }
+        local_llms = llms if llms else [self.llm]
 
-        return LocalSearch(
-            llm=self.llm,
+        return [LocalSearch(
+            llm=_llm,
             system_prompt=self.context_builder.local_system_prompt,
             context_builder=self.context_builder.local_mixed_context,
             token_encoder=self.token_encoder,
             llm_params=llm_params,
             context_builder_params=local_context_params,
             response_type="multiple paragraphs",
-        )
+        ) for _llm in local_llms]
 
     def _process_primer_results(
         self, query: str, search_results: SearchResult
@@ -145,7 +148,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         raise ValueError(error_msg)
 
     async def asearch_step(
-        self, global_query: str, search_engine: LocalSearch, actions: list[DriftAction]
+        self, global_query: str, search_engine: list[LocalSearch], actions: list[DriftAction]
     ) -> list[DriftAction]:
         """
         Perform an asynchronous search step by executing each DriftAction asynchronously.
@@ -160,7 +163,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         list[DriftAction]: The results from executing the search actions asynchronously.
         """
         tasks = [
-            action.asearch(search_engine=search_engine, global_query=global_query)
+            action.asearch(search_engine=search_engine[randint(0, (len(search_engine)-1))], global_query=global_query)
             for action in actions
         ]
         return await tqdm_asyncio.gather(*tasks, leave=False)

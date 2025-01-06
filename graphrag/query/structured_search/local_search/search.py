@@ -78,10 +78,12 @@ class LocalSearch(BaseSearch[LocalContextBuilder]):
         try:
             if "drift_query" in kwargs:
                 drift_query = kwargs["drift_query"]
+                num_followups = kwargs["num_followups"]
                 search_prompt = self.system_prompt.format(
                     context_data=context_result.context_chunks,
                     response_type=self.response_type,
                     global_query=drift_query,
+                    num_followups=num_followups,
                 )
             else:
                 search_prompt = self.system_prompt.format(

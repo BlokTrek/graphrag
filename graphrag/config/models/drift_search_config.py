@@ -45,6 +45,11 @@ class DRIFTSearchConfig(BaseModel):
         default=defs.DRIFT_SEARCH_K_FOLLOW_UPS,
     )
 
+    drift_generate_p_followups: int = Field(
+        description="The number of followups to generate",
+        default=defs.DRIFT_SEARCH_P_FOLLOWUPS,
+    )
+
     primer_folds: int = Field(
         description="The number of folds for search priming.",
         default=defs.DRIFT_SEARCH_PRIMER_FOLDS,

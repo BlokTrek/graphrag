@@ -136,7 +136,7 @@ class DRIFTPrimer:
         """
         community_reports = "\n\n".join(reports["full_content"].tolist())
         prompt = DRIFT_PRIMER_PROMPT.format(
-            query=query, community_reports=community_reports
+            query=query, community_reports=community_reports, num_followups=self.config.drift_generate_p_followups,
         )
         messages = [{"role": "user", "content": prompt}]
 

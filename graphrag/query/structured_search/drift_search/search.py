@@ -163,7 +163,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         list[DriftAction]: The results from executing the search actions asynchronously.
         """
         tasks = [
-            action.asearch(search_engine=search_engine[randint(0, (len(search_engine)-1))], global_query=global_query)
+            action.asearch(search_engine=search_engine[randint(0, (len(search_engine)-1))], global_query=global_query, num_followups=self.config.drift_generate_p_followups)
             for action in actions
         ]
         return await tqdm_asyncio.gather(*tasks, leave=False)

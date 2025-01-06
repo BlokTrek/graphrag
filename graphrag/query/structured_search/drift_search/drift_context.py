@@ -42,6 +42,7 @@ class DRIFTSearchContextBuilder(DRIFTContextBuilder):
         text_embedder: BaseTextEmbedding,
         entities: list[Entity],
         entity_text_embeddings: BaseVectorStore,
+        community_embeddings: BaseVectorStore,
         text_units: list[TextUnit] | None = None,
         reports: list[CommunityReport] | None = None,
         relationships: list[Relationship] | None = None,
@@ -61,6 +62,7 @@ class DRIFTSearchContextBuilder(DRIFTContextBuilder):
 
         self.entities = entities
         self.entity_text_embeddings = entity_text_embeddings
+        self.community_embeddings = community_embeddings
         self.reports = reports
         self.text_units = text_units
         self.relationships = relationships
@@ -157,7 +159,7 @@ class DRIFTSearchContextBuilder(DRIFTContextBuilder):
             and isinstance(query_embedding[0], type(embedding[0]))
         )
 
-    def build_context(
+    def build_context_2(
         self, query: str, **kwargs
     ) -> tuple[pd.DataFrame, dict[str, int]]:
         """
@@ -219,3 +221,35 @@ class DRIFTSearchContextBuilder(DRIFTContextBuilder):
         top_k = report_df.nlargest(self.config.drift_k_followups, "similarity")
 
         return top_k.loc[:, ["short_id", "community_id", "full_content"]], token_ct
+    
+    def build_context(
+        self, query: str, **kwargs
+    ) -> tuple[pd.DataFrame, dict[str, int]]:
+        """
+        Build DRIFT search context.
+
+        Args
+        ----
+        query : str
+            Search query string.
+
+        Returns
+        -------
+        pd.DataFrame: Top-k most similar documents.
+        dict[str, int]: Number of LLM calls, and prompts and output tokens. Currently empty.
+        """
+        if self.reports is None:
+            missing_reports_error = (
+                "No community reports available. Please provide a list of reports."
+            )
+            raise ValueError(missing_reports_error)
+
+        report_df = pd.DataFrame([asdict(report) for report in self.reports])
+
+        search_results = self.community_embeddings.similarity_search_by_text(text=query, text_embedder=self.text_embedder.embed, k=self.config.drift_k_followups)
+
+        result_ids = [result.document.id for result in search_results]
+
+        top_k = report_df[report_df["id"].isin(result_ids)]
+
+        return top_k.loc[:, ["short_id", "community_id", "full_content"]], {"llm_calls": 1,"prompt_tokens": 0,"output_tokens": 0,}

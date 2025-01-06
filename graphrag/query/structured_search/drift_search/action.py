@@ -48,7 +48,7 @@ class DriftAction:
         """Check if the action is complete (i.e., an answer is available)."""
         return self.answer is not None
 
-    async def asearch(self, search_engine: Any, global_query: str, scorer: Any = None):
+    async def asearch(self, search_engine: Any, global_query: str, scorer: Any = None, **kwargs):
         """
         Execute an asynchronous search using the search engine, and update the action with the results.
 
@@ -68,9 +68,14 @@ class DriftAction:
             log.warning("Action already complete. Skipping search.")
             return self
 
-        search_result = await search_engine.asearch(
-            drift_query=global_query, query=self.query
-        )
+        if "num_followups" in kwargs:
+            search_result = await search_engine.asearch(
+                drift_query=global_query, query=self.query, num_followups=kwargs["num_followups"]
+            )
+        else:
+            search_result = await search_engine.asearch(
+                drift_query=global_query, query=self.query
+            )
 
         try:
             response = json.loads(search_result.response)

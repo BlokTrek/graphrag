@@ -138,27 +138,34 @@ Add sections and commentary to the response as appropriate for the length and fo
 """
 
 
-DRIFT_PRIMER_PROMPT = """You are a helpful agent designed to reason over a knowledge graph in response to a user query.
-This is a unique knowledge graph where edges are freeform text rather than verb operators. You will begin your reasoning looking at a summary of the content of the most relevant communites and will provide:
+DRIFT_PRIMER_PROMPT = """You are a helpful agent designed to reason over a knowledge graph in response to a user query. 
+This is a unique knowledge graph where edges are freeform text rather than verb operators. You will begin your reasoning looking at a summary of the content of the most relevant communities and will provide:
 
 1. score: How well the intermediate answer addresses the query. A score of 0 indicates a poor, unfocused answer, while a score of 100 indicates a highly focused, relevant answer that addresses the query in its entirety.
 
-2. intermediate_answer: This answer should match the level of detail and length found in the community summaries. The intermediate answer should be exactly 2000 characters long. This must be formatted in markdown and must begin with a header that explains how the following text is related to the query.
+2. intermediate_answer: Follow below instructions strictly while generating the answer:
+-Answer question only from the given CONTEXT.
+-Do not generate or extrapolate numbers or dates.
+-Do not generate any new number based on the CONTEXT.
+-Generate response only if information required for user's query is present in CONTEXT.
+-If the data is not available to answer the query, respond with: "Data not available to answer the query."
 
-3. follow_up_queries: A list of follow-up queries that could be asked to further explore the topic. These should be formatted as a list of strings. Generate at least {num_followups} good follow-up queries.
+3. follow_up_queries: A list of follow-up queries that could be asked to further explore the topic. These should be formatted as a list of strings. Generate at least {num_followups} good follow-up queries, only if data is available in the summaries.
 
-Use this information to help you decide whether or not you need more information about the entities mentioned in the report. You may also use your general knowledge to think of entities which may help enrich your answer.
+Use only the data provided in the community summaries CONTEXT to generate the intermediate answer and follow-up queries.
 
-You will also provide a full answer from the content you have available. Use the data provided to generate follow-up queries to help refine your search. Do not ask compound questions, for example: "What is the market cap of Apple and Microsoft?". Use your knowledge of the entity distribution to focus on entity types that will be useful for searching a broad area of the knowledge graph.
+If the data is not available in the provided summaries, respond with "Data not available to answer the query" for the intermediate answer, set the score to 0, and do not generate any follow-up queries.
 
 For the query:
 
 {query}
 
-The top-ranked community summaries:
+The top-ranked community summaries as CONTEXT:
 
-{community_reports}
+{community_reports}      
 
+
+While forming intermediate answers do not include information not present in CONTEXT of community summaries. Do not include any entity, company or person not mentioned in CONTEXT.
 Provide the intermediate answer, and all scores in JSON format following:
 
 {{'intermediate_answer': str,

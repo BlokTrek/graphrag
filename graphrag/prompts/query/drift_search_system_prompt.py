@@ -150,7 +150,7 @@ This is a unique knowledge graph where edges are freeform text rather than verb 
 -Generate response only if information required for user's query is present in CONTEXT.
 -If the data is not available to answer the query, respond with: "Data not available to answer the query."
 
-3. follow_up_queries: A list of follow-up queries that could be asked to further explore the topic. These should be formatted as a list of strings. Generate at least {num_followups} good follow-up queries, only if data is available in the summaries.
+3. follow_up_queries: A list of follow-up queries that could be asked to further explore the topic. These should be formatted as a list of strings. Generate at least {num_followups} good follow-up queries, only if data is available in the summaries. If no data is available in summaries, generate the follow ups to be the original query. You may rephrase the original query in this case.
 
 Use only the data provided in the community summaries CONTEXT to generate the intermediate answer and follow-up queries.
 

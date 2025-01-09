@@ -163,6 +163,7 @@ def build_relationship_context(
     column_delimiter: str = "|",
     context_name: str = "Relationships",
 ) -> tuple[str, pd.DataFrame]:
+    # import pdb; pdb.set_trace()
     """Prepare relationship data tables as context data for system prompt."""
     selected_relationships = _filter_relationships(
         selected_entities=selected_entities,
@@ -233,6 +234,7 @@ def _filter_relationships(
 ) -> list[Relationship]:
     """Filter and sort relationships based on a set of selected entities and a ranking attribute."""
     # First priority: in-network relationships (i.e. relationships between selected entities)
+    # import pdb; pdb.set_trace()
     in_network_relationships = get_in_network_relationships(
         selected_entities=selected_entities,
         relationships=relationships,

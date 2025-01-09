@@ -194,6 +194,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             raise ValueError(error_msg)
 
         llm_calls, prompt_tokens, output_tokens = {}, {}, {}
+        log_data = {}
 
         start_time = time.perf_counter()
 
@@ -208,6 +209,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             primer_response = await self.primer.asearch(
                 query=query, top_k_reports=primer_context
             )
+            log_data['primer_run_time'] = primer_response.completion_time
             llm_calls["primer"] = primer_response.llm_calls
             prompt_tokens["primer"] = primer_response.prompt_tokens
             output_tokens["primer"] = primer_response.output_tokens
@@ -216,7 +218,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             init_action = self._process_primer_results(query, primer_response)
             self.query_state.add_action(init_action)
             self.query_state.add_all_follow_ups(init_action, init_action.follow_ups)
-
+        
         # Main loop
         epochs = 0
         llm_call_offset = 0
@@ -231,7 +233,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             results = await self.asearch_step(
                 global_query=query, search_engine=self.local_search, actions=actions
             )
-
+            log_data[f'followup_run_time_epoch_{epochs}'] = [result.completion_time for result in results]
             # Update query state
             for action in results:
                 self.query_state.add_action(action)
@@ -262,7 +264,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             llm_calls_categories=llm_calls,
             prompt_tokens_categories=prompt_tokens,
             output_tokens_categories=output_tokens,
-        )
+        ), log_data
 
     def search(
         self,

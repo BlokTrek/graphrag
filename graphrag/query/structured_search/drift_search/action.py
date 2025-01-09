@@ -42,6 +42,7 @@ class DriftAction:
             "prompt_tokens": 0,
             "output_tokens": 0,
         }
+        self.completion_time = 0.0
 
     @property
     def is_complete(self) -> bool:
@@ -72,10 +73,12 @@ class DriftAction:
             search_result = await search_engine.asearch(
                 drift_query=global_query, query=self.query, num_followups=kwargs["num_followups"]
             )
+            self.completion_time = search_result.completion_time
         else:
             search_result = await search_engine.asearch(
                 drift_query=global_query, query=self.query
             )
+            self.completion_time = search_result.completion_time
 
         try:
             response = json.loads(search_result.response)

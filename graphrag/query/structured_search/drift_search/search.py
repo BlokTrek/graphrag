@@ -80,6 +80,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             "return_candidate_context": False,
             "embedding_vectorstore_key": EntityVectorStoreKey.ID,
             "max_tokens": self.config.local_search_max_data_tokens,
+            "exclude_entity_types": self.config.exclude_entity_types,
         }
 
         llm_params = {
@@ -173,7 +174,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         query: str,
         conversation_history: Any = None,
         **kwargs,
-    ) -> SearchResult:
+    ) -> tuple[SearchResult, dict]:
         """
         Perform an asynchronous DRIFT search.
 

@@ -144,6 +144,7 @@ class LocalSearchMixedContext(LocalContextBuilder):
             embedding_vectorstore_key=self.embedding_vectorstore_key,
             include_entity_names=include_entity_names,
             exclude_entity_names=exclude_entity_names,
+            exclude_entity_types=kwargs.get("exclude_entity_types"),
             k=top_k_mapped_entities,
             oversample_scaler=2,
         )

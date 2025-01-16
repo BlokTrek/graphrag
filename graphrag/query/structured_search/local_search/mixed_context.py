@@ -94,6 +94,7 @@ class LocalSearchMixedContext(LocalContextBuilder):
         conversation_history: ConversationHistory | None = None,
         include_entity_names: list[str] | None = None,
         exclude_entity_names: list[str] | None = None,
+        exclude_entity_types: list[str] | None = [],
         conversation_history_max_turns: int | None = 5,
         conversation_history_user_turns_only: bool = True,
         max_tokens: int = 8000,
@@ -144,7 +145,7 @@ class LocalSearchMixedContext(LocalContextBuilder):
             embedding_vectorstore_key=self.embedding_vectorstore_key,
             include_entity_names=include_entity_names,
             exclude_entity_names=exclude_entity_names,
-            exclude_entity_types=kwargs.get("exclude_entity_types"),
+            exclude_entity_types=exclude_entity_types,
             k=top_k_mapped_entities,
             oversample_scaler=2,
         )

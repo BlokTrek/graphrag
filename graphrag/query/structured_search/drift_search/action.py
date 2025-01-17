@@ -64,9 +64,9 @@ class DriftAction:
         self : DriftAction
             Updated action with search results.
         """
-        if self.is_complete:
-            log.warning("Action already complete. Skipping search.")
-            return self
+        # if self.is_complete:
+        #     log.warning("Action already complete. Skipping search.")
+        #     return self
 
         if "num_followups" in kwargs:
             search_result = await search_engine.asearch(

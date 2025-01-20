@@ -54,7 +54,8 @@ class QueryState:
 
     def find_incomplete_actions(self) -> list[DriftAction]:
         """Find all unanswered actions in the graph."""
-        return [node for node in self.graph.nodes if not node.is_complete]
+        # return [node for node in self.graph.nodes if not node.is_complete]
+        return [node for node in self.graph.nodes]
 
     def rank_incomplete_actions(
         self, scorer: Callable[[DriftAction], float] | None = None

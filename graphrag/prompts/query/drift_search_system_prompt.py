@@ -107,9 +107,11 @@ This is a unique knowledge graph where edges are freeform text rather than verb 
 
 2. intermediate_answer: Follow below instructions strictly while generating the answer:
 -Answer question only from the given CONTEXT.
+-Generate the response in paragraph format using all available information from the input data tables. Do not limit your response to top entities only. Do not provide unnecessary information, answer the query as it is
 -Do not generate or extrapolate numbers or dates.
 -Do not generate any new number based on the CONTEXT.
 -Generate response only if information required for user's query is present in CONTEXT.
+-ONLY answer the query with data that you are completely sure is correct.
 -If the data is not available to answer the query, respond with: "Data not available to answer the query."
 
 3. follow_up_queries: A list of follow-up queries that could be asked to further explore the topic. These should be formatted as a list of strings. Generate at least {num_followups} good follow-up queries, only if data is available in the summaries. If no data is available in summaries, generate the follow ups to be the original query. You may rephrase the original query in this case.

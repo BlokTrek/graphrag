@@ -158,6 +158,7 @@ class DRIFTPrimer:
         self,
         query: str,
         top_k_reports: pd.DataFrame,
+        intermediate_queries: list
     ) -> SearchResult:
         """
         Asynchronous search method that processes the query and returns a SearchResult.
@@ -176,6 +177,8 @@ class DRIFTPrimer:
         results_with_tokens = await tqdm_asyncio.gather(*tasks, leave=False)
 
         completion_time = time.perf_counter() - start_time
+        for result in results_with_tokens:
+            result[0]['follow_up_queries'] = intermediate_queries
 
         return SearchResult(
             response=[response for response, _ in results_with_tokens],

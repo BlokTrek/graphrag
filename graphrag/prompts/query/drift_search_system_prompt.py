@@ -174,3 +174,36 @@ Provide the intermediate answer, and all scores in JSON format following:
 
 Begin:
 """
+
+DRIFT_DECOMPOSE_PROMPT_SYSTEM = """You are tasked with breaking down a complex multi-part query into independent sub-queries. Each sub-query must be rephrased as a complete, independent question that does not reference other sub-queries explicitly.  
+
+For each sub-query, return a dictionary where:  
+- Each key is the rephrased sub-query.  
+- Each value is a list of entity types applicable to the sub-query, indicating whether the current sub-query falls under those entity types.  
+
+Ensure the response follows these principles:  
+- Sub-queries are independent and complete.  
+- The **target type** of the original query must be preserved in all sub-queries (e.g., if the query is about "angel investors," all sub-queries should center on angel investors, if query is about companies all sub-queries should also be about companies, etc.).  
+- Entity types must be selected from the ENTITY_TYPES list.  
+- Each sub-query should include a maximum of two relevant entity types.  
+- The sub-queries, when combined, must collectively address all the entity types in the user's original query.  
+- Sub-queries should be rephrased to avoid redundancy and ensure clarity while preserving the meaning of the original query.  
+
+ENTITY TYPES:
+
+"""
+DRIFT_DECOMPOSE_PROMPT_ENTITY_TYPES = """
+['ORGANIZATION', 'THEME', 'INVESTMENT STAGE', 'ROLE', 'GEO', 'PERSON', 'GENDER', 'EDUCATIONAL INSTITUTION']
+"""
+
+DRIFT_DECOMPOSE_PROMPT_USER = """Break down the following query into independent sub-queries and output the result as a dictionary. Each dictionary key should be the sub-query, and the corresponding value should be a list of up to two entity types relevant to the sub-query.  
+
+Ensure:  
+- Each sub-query contains a maximum of two entity types.  
+- All the entity types mentioned in the original query are distributed across the sub-queries.  
+- The **target type** of the original query must be preserved in all sub-queries.  
+- The sub-queries are rephrased as independent, complete questions.  
+- Sub-queries, when taken together, must cover all aspects of the original query.  
+
+Query:
+"""

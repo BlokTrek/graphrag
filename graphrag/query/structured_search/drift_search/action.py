@@ -20,6 +20,7 @@ class DriftAction:
     def __init__(
         self,
         query: str,
+        ner_entities: list,
         answer: str | None = None,
         follow_ups: list["DriftAction"] | None = None,
     ):
@@ -37,6 +38,7 @@ class DriftAction:
         self.follow_ups: list[DriftAction] = (
             follow_ups if follow_ups is not None else []
         )
+        self.ner_entities = ner_entities
         self.metadata: dict[str, Any] = {
             "llm_calls": 0,
             "prompt_tokens": 0,
@@ -68,10 +70,9 @@ class DriftAction:
         # if self.is_complete:
         #     log.warning("Action already complete. Skipping search.")
         #     return self
-
         if "num_followups" in kwargs:
             search_result = await search_engine.asearch(
-                drift_query=global_query, query=self.query, num_followups=kwargs["num_followups"]
+                drift_query=global_query, query=self.query, num_followups=kwargs["num_followups"], ner_entities=self.ner_entities
             )
             self.completion_time = search_result.completion_time
         else:
@@ -199,6 +200,7 @@ class DriftAction:
                 query,
                 follow_ups=response.get("follow_up_queries", []),
                 answer=response.get("intermediate_answer"),
+                ner_entities = response.get("ner_entities", [])
             )
             action.score = response.get("score")
             return action

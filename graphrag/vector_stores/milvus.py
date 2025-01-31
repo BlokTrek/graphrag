@@ -113,7 +113,7 @@ class MilvusVectorStore(BaseVectorStore):
         return super().search_by_id(id)
 
     def similarity_search_by_vector(
-            self, query_embedding: list[float], k: int = 10, **kwargs: Any
+            self, query_embedding: list[float], k: int = 10, filter: str = "", **kwargs: Any
     ) -> list[VectorStoreSearchResult]:
         """Perform a vector-based similarity search."""
         if self.db_connection is None:
@@ -126,7 +126,8 @@ class MilvusVectorStore(BaseVectorStore):
             collection_name=self.collection_name,
             anns_field=self._vector_field,
             data=[query_embedding],
-            filter=self.query_filter,
+            # filter=self.query_filter,
+            filter=filter,
             limit=k,
             output_fields=["*"],
         )[0]
@@ -152,10 +153,10 @@ class MilvusVectorStore(BaseVectorStore):
         return final_results
 
     def similarity_search_by_text(
-            self, text: str, text_embedder: TextEmbedder, k: int = 10, **kwargs: Any
+            self, text: str, text_embedder: TextEmbedder, k: int = 10, filter: str = "",  **kwargs: Any
     ) -> list[VectorStoreSearchResult]:
         """Perform a similarity search using a given input text."""
         query_embedding = text_embedder(text)
         if query_embedding:
-            return self.similarity_search_by_vector(query_embedding, k)
+            return self.similarity_search_by_vector(query_embedding, k, filter)
         return []

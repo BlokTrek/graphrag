@@ -109,7 +109,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         ) for _llm in local_llms]
 
     def _process_primer_results(
-        self, query: str, search_results: SearchResult
+        self, query: str, search_results: SearchResult, ner_entities
     ) -> DriftAction:
         """
         Process the results from the primer search to extract intermediate answers and follow-up queries.
@@ -140,7 +140,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
                 i["intermediate_answer"] for i in response if "intermediate_answer" in i
             ])
 
-            follow_ups = [fu for i in response for fu in i.get("follow_up_queries", [])]
+            follow_ups = list(set([fu for i in response for fu in i.get("follow_up_queries", [])]))
 
             if not follow_ups:
                 error_msg = "No follow-up queries found in primer response. Ensure that the primer response includes follow-up queries."
@@ -151,6 +151,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
                 "intermediate_answer": intermediate_answer,
                 "follow_up_queries": follow_ups,
                 "score": score,
+                "ner_entities": ner_entities
             }
             return DriftAction.from_primer_response(query, response_data)
         error_msg = "Response must be a list of dictionaries."
@@ -215,22 +216,8 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             prompt_tokens["build_context"] = token_ct["prompt_tokens"]
             output_tokens["build_context"] = token_ct["prompt_tokens"]
 
-            search_messages = [
-                {"role": "system", "content": DRIFT_DECOMPOSE_PROMPT_SYSTEM + DRIFT_DECOMPOSE_PROMPT_ENTITY_TYPES},
-                {"role": "user", "content": DRIFT_DECOMPOSE_PROMPT_USER + query},
-            ]
-            self.llm_params['temperature'] = 0.0
-            intermediate_queries = await self.llm.agenerate(
-                messages=search_messages,
-                streaming=False,
-                **self.llm_params,
-            )
-            
-            intermediate_queries = self._get_embedded_json(intermediate_queries)
-            if not intermediate_queries:
-                intermediate_queries = {query:[]}
             primer_response = await self.primer.asearch(
-                query=query, top_k_reports=primer_context, intermediate_queries=intermediate_queries
+                query=query, top_k_reports=primer_context, #intermediate_queries=intermediate_queries
             )
             log_data['primer_run_time'] = primer_response.completion_time
             llm_calls["primer"] = primer_response.llm_calls
@@ -239,10 +226,9 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
 
             # Package response into DriftAction
 
-            init_action = self._process_primer_results(query, primer_response)
+            init_action = self._process_primer_results(query, primer_response, ner_entities=conversation_history)
             self.query_state.add_action(init_action)
-            self.query_state.add_all_follow_ups(init_action, init_action.follow_ups)
-        
+            self.query_state.add_all_follow_ups(init_action, init_action.follow_ups, conversation_history)
         # Main loop
         epochs = 0
         llm_call_offset = 0

@@ -128,7 +128,6 @@ class LocalSearchMixedContext(LocalContextBuilder):
                 "The sum of community_prop and text_unit_prop should not exceed 1."
             )
             raise ValueError(value_error)
-
         # map user query to entities
         # if there is conversation history, attached the previous user questions to the current query
         if conversation_history:
@@ -136,6 +135,8 @@ class LocalSearchMixedContext(LocalContextBuilder):
                 conversation_history.get_user_turns(conversation_history_max_turns)
             )
             query = f"{query}\n{pre_user_questions}"
+
+        include_entity_names = kwargs.get('ner_entities', [])
 
         selected_entities = map_query_to_entities(
             query=query,
@@ -149,7 +150,6 @@ class LocalSearchMixedContext(LocalContextBuilder):
             k=top_k_mapped_entities,
             oversample_scaler=2,
         )
-
         # build context
         final_context = list[str]()
         final_context_data = dict[str, pd.DataFrame]()

@@ -35,6 +35,7 @@ class QueryState:
         self,
         action: DriftAction,
         follow_ups: list[DriftAction] | list[str],
+        ner_entities = [],
         weight: float = 1.0,
     ):
         """Add all follow-up actions and links them to the given action."""
@@ -43,7 +44,7 @@ class QueryState:
 
         for follow_up in follow_ups:
             if isinstance(follow_up, str):
-                follow_up = DriftAction(query=follow_up)
+                follow_up = DriftAction(query=follow_up, ner_entities=ner_entities)
             elif not isinstance(follow_up, DriftAction):
                 log.warning(
                     "Follow-up action is not a string, found type: %s", type(follow_up)

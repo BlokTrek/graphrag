@@ -3,16 +3,23 @@
 
 """DRIFT Search implementation."""
 
+import ast
 import logging
 import time
 from collections.abc import AsyncGenerator
 from random import randint
 from typing import Any
+import ast
 
 import tiktoken
 from tqdm.asyncio import tqdm_asyncio
 
 from graphrag.config.models.drift_search_config import DRIFTSearchConfig
+from graphrag.prompts.query.drift_search_system_prompt import (
+    DRIFT_DECOMPOSE_PROMPT_ENTITY_TYPES,
+    DRIFT_DECOMPOSE_PROMPT_SYSTEM,
+    DRIFT_DECOMPOSE_PROMPT_USER,
+)
 from graphrag.query.context_builder.conversation_history import ConversationHistory
 from graphrag.query.context_builder.entity_extraction import EntityVectorStoreKey
 from graphrag.query.llm.oai.chat_openai import ChatOpenAI
@@ -24,6 +31,7 @@ from graphrag.query.structured_search.drift_search.drift_context import (
 from graphrag.query.structured_search.drift_search.primer import DRIFTPrimer
 from graphrag.query.structured_search.drift_search.state import QueryState
 from graphrag.query.structured_search.local_search.search import LocalSearch
+from graphrag.prompts.query.drift_search_system_prompt import DRIFT_DECOMPOSE_PROMPT_SYSTEM, DRIFT_DECOMPOSE_PROMPT_ENTITY_TYPES, DRIFT_DECOMPOSE_PROMPT_USER
 
 log = logging.getLogger(__name__)
 
@@ -80,6 +88,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             "return_candidate_context": False,
             "embedding_vectorstore_key": EntityVectorStoreKey.ID,
             "max_tokens": self.config.local_search_max_data_tokens,
+            "exclude_entity_types": self.config.exclude_entity_types,
         }
 
         llm_params = {
@@ -96,7 +105,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             token_encoder=self.token_encoder,
             llm_params=llm_params,
             context_builder_params=local_context_params,
-            response_type="multiple paragraphs",
+            response_type="markdown tabular",
         ) for _llm in local_llms]
 
     def _process_primer_results(
@@ -173,7 +182,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         query: str,
         conversation_history: Any = None,
         **kwargs,
-    ) -> SearchResult:
+    ) -> tuple[SearchResult, dict]:
         """
         Perform an asynchronous DRIFT search.
 
@@ -194,6 +203,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             raise ValueError(error_msg)
 
         llm_calls, prompt_tokens, output_tokens = {}, {}, {}
+        log_data = {}
 
         start_time = time.perf_counter()
 
@@ -205,18 +215,34 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             prompt_tokens["build_context"] = token_ct["prompt_tokens"]
             output_tokens["build_context"] = token_ct["prompt_tokens"]
 
-            primer_response = await self.primer.asearch(
-                query=query, top_k_reports=primer_context
+            search_messages = [
+                {"role": "system", "content": DRIFT_DECOMPOSE_PROMPT_SYSTEM + DRIFT_DECOMPOSE_PROMPT_ENTITY_TYPES},
+                {"role": "user", "content": DRIFT_DECOMPOSE_PROMPT_USER + query},
+            ]
+            self.llm_params['temperature'] = 0.0
+            intermediate_queries = await self.llm.agenerate(
+                messages=search_messages,
+                streaming=False,
+                **self.llm_params,
             )
+            
+            intermediate_queries = self._get_embedded_json(intermediate_queries)
+            if not intermediate_queries:
+                intermediate_queries = {query:[]}
+            primer_response = await self.primer.asearch(
+                query=query, top_k_reports=primer_context, intermediate_queries=intermediate_queries
+            )
+            log_data['primer_run_time'] = primer_response.completion_time
             llm_calls["primer"] = primer_response.llm_calls
             prompt_tokens["primer"] = primer_response.prompt_tokens
             output_tokens["primer"] = primer_response.output_tokens
 
             # Package response into DriftAction
+
             init_action = self._process_primer_results(query, primer_response)
             self.query_state.add_action(init_action)
             self.query_state.add_all_follow_ups(init_action, init_action.follow_ups)
-
+        
         # Main loop
         epochs = 0
         llm_call_offset = 0
@@ -225,13 +251,13 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             if len(actions) == 0:
                 log.info("No more actions to take. Exiting DRIFT loop.")
                 break
-            actions = actions[: self.config.drift_k_followups]
+            # actions = actions[: self.config.drift_k_followups]
             llm_call_offset += len(actions) - self.config.drift_k_followups
             # Process actions
             results = await self.asearch_step(
                 global_query=query, search_engine=self.local_search, actions=actions
             )
-
+            log_data[f'followup_run_time_epoch_{epochs}'] = [result.completion_time for result in results]
             # Update query state
             for action in results:
                 self.query_state.add_action(action)
@@ -262,7 +288,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             llm_calls_categories=llm_calls,
             prompt_tokens_categories=prompt_tokens,
             output_tokens_categories=output_tokens,
-        )
+        ), log_data
 
     def search(
         self,
@@ -300,3 +326,17 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         """
         error_msg = "Streaming DRIFT search is not implemented."
         raise NotImplementedError(error_msg)
+    
+    @staticmethod
+    def _get_embedded_json(embedded_str):
+        try:
+            query_dict = (
+                embedded_str.replace("`", "")
+                .replace("json", "")
+                .replace("\n", " ")
+                .split("}")[0]
+                + "}"
+            )
+            return ast.literal_eval(query_dict)
+        except Exception:  # noqa: BLE001
+            return {}

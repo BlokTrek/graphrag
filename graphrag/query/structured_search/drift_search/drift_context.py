@@ -246,7 +246,7 @@ class DRIFTSearchContextBuilder(DRIFTContextBuilder):
 
         report_df = pd.DataFrame([asdict(report) for report in self.reports])
 
-        search_results = self.community_embeddings.similarity_search_by_text(text=query, text_embedder=self.text_embedder.embed, k=self.config.drift_k_followups)
+        search_results = self.community_embeddings.similarity_search_by_text(text=query, text_embedder=self.text_embedder.embed, k=self.config.drift_k_followups*5)
 
         result_ids = [result.document.id for result in search_results]
 

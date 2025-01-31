@@ -109,3 +109,7 @@ class DRIFTSearchConfig(BaseModel):
         description="The maximum number of generated tokens for the LLM in local search.",
         default=defs.DRIFT_LOCAL_SEARCH_LLM_MAX_TOKENS,
     )
+    exclude_entity_types: list = Field(
+        description="To exclude any specific type of entity",
+        default_factory=list,
+    )

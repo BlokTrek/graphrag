@@ -265,19 +265,31 @@ def _filter_relationships(
     out_network_entity_names = list(
         set(out_network_source_names + out_network_target_names)
     )
-    out_network_entity_links = defaultdict(int)
-    for entity_name in out_network_entity_names:
-        targets = [
-            relationship.target
-            for relationship in out_network_relationships
-            if relationship.source == entity_name
-        ]
-        sources = [
-            relationship.source
-            for relationship in out_network_relationships
-            if relationship.target == entity_name
-        ]
-        out_network_entity_links[entity_name] = len(set(targets + sources))
+    # Prepare a mapping for quick lookup of sources and targets
+    source_to_targets = defaultdict(set)
+    target_to_sources = defaultdict(set)
+    # Build lookup tables from relationships
+    for relationship in out_network_relationships:
+        source_to_targets[relationship.source].add(relationship.target)
+        target_to_sources[relationship.target].add(relationship.source)
+    # Compute the links for each entity in `out_network_entity_names`
+    out_network_entity_links = {
+        entity_name: len(source_to_targets[entity_name] | target_to_sources[entity_name])
+        for entity_name in out_network_entity_names
+    }
+    # out_network_entity_links = defaultdict(int)
+    # for entity_name in out_network_entity_names:
+    #     targets = [
+    #         relationship.target
+    #         for relationship in out_network_relationships
+    #         if relationship.source == entity_name
+    #     ]
+    #     sources = [
+    #         relationship.source
+    #         for relationship in out_network_relationships
+    #         if relationship.target == entity_name
+    #     ]
+    #     out_network_entity_links[entity_name] = len(set(targets + sources))
 
     # sort out-network relationships by number of links and rank_attributes
     for rel in out_network_relationships:

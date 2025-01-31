@@ -42,6 +42,7 @@ def map_query_to_entities(
     embedding_vectorstore_key: str = EntityVectorStoreKey.ID,
     include_entity_names: list[str] | None = None,
     exclude_entity_names: list[str] | None = None,
+    exclude_entity_types: list[str] | None = None,
     k: int = 10,
     oversample_scaler: int = 2,
 ) -> list[Entity]:
@@ -50,6 +51,8 @@ def map_query_to_entities(
         include_entity_names = []
     if exclude_entity_names is None:
         exclude_entity_names = []
+    if exclude_entity_types is None:
+        exclude_entity_types = []
     all_entities = list(all_entities_dict.values())
     matched_entities = []
     if query != "":
@@ -85,6 +88,12 @@ def map_query_to_entities(
             if entity.title not in exclude_entity_names
         ]
 
+    if exclude_entity_types:
+        matched_entities = [
+            entity
+            for entity in matched_entities
+            if entity.type not in exclude_entity_types
+        ]
     # add entities in the include_entity list
     included_entities = []
     for entity_name in include_entity_names:

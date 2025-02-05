@@ -26,9 +26,22 @@ class MilvusVectorStore(BaseVectorStore):
     def connect(self, **kwargs: Any) -> Any:
         """Connect to the vector storage."""
         self.db_connection = MilvusClient(**kwargs)
-        self._id_field = "graph_id"
-        self._text_field = "text"
-        self._vector_field = "embeddings"
+        if kwargs.get("id_field", ""):
+            self._id_field = kwargs.get("id_field", "")
+        else:
+            self._id_field = "graph_id"
+        if kwargs.get("text_field", ""):
+            self._text_field = kwargs.get("text_field", "")
+        else:
+            self._text_field = "text"
+        if kwargs.get("vector_field", ""):
+            self._vector_field = kwargs.get("vector_field", "")
+        else:
+            self._vector_field = "embeddings"
+        if kwargs.get("type_field", ""):
+            self._type_field = kwargs.get("type_field", "")
+        else:
+            self._type_field = "entity_type"
 
     def load_documents(
             self, documents: list[VectorStoreDocument], overwrite: bool = True

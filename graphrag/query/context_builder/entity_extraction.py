@@ -44,7 +44,7 @@ def map_query_to_entities(
     exclude_entity_names: list[str] | None = None,
     exclude_entity_types: list[str] | None = None,
     k: int = 10,
-    oversample_scaler: int = 2,
+    oversample_scaler: int = 1,
 ) -> list[Entity]:
     """Extract entities that match a given query using semantic similarity of text embeddings of query and entity descriptions."""
     if include_entity_names is None:
@@ -56,7 +56,7 @@ def map_query_to_entities(
     all_entities = list(all_entities_dict.values())
     matched_entities = []
     for key, value in include_entity_names[0].items():
-        filter = f"entity_type == '{key}'"
+        filter = f"{text_embedding_vectorstore._type_field} == '{key}'"
         entities_to_map = value
         # if query != "":
             # get entities with highest semantic similarity to query
@@ -103,7 +103,6 @@ def map_query_to_entities(
     included_entities = []
     for entity_name in include_entity_names:
         included_entities.extend(get_entity_by_name(all_entities, entity_name))
-    
     return included_entities + matched_entities
 
 

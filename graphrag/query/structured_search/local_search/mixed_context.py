@@ -148,7 +148,7 @@ class LocalSearchMixedContext(LocalContextBuilder):
             exclude_entity_names=exclude_entity_names,
             exclude_entity_types=exclude_entity_types,
             k=top_k_mapped_entities,
-            oversample_scaler=2,
+            oversample_scaler=1,
         )
         # build context
         final_context = list[str]()

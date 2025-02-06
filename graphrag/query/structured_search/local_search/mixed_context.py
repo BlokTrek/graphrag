@@ -222,7 +222,6 @@ class LocalSearchMixedContext(LocalContextBuilder):
             final_context.append(text_unit_context)
             final_context_data = {**final_context_data, **text_unit_context_data}
 
-        import pdb; pdb.set_trace()
         return ContextBuilderResult(
             context_chunks="\n\n".join(final_context),
             context_records=final_context_data,

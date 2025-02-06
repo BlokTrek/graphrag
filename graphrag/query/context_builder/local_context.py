@@ -155,6 +155,7 @@ def build_covariates_context(
 def build_relationship_context(
     selected_entities: list[Entity],
     relationships: list[Relationship],
+    entity_filter: list[str],  # New parameter to filter by source/target
     token_encoder: tiktoken.Encoding | None = None,
     include_relationship_weight: bool = False,
     max_tokens: int = 8000,
@@ -192,6 +193,10 @@ def build_relationship_context(
 
     all_context_records = [header]
     for rel in selected_relationships:
+        if entity_filter:
+            if rel.source not in entity_filter and rel.target not in entity_filter:
+                continue  # Skip rows that don't match the entity filter
+        
         new_context = [
             rel.short_id if rel.short_id else "",
             rel.source,
@@ -223,6 +228,7 @@ def build_relationship_context(
         record_df = pd.DataFrame()
 
     return current_context_text, record_df
+
 
 
 def _filter_relationships(

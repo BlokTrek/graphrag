@@ -163,6 +163,7 @@ def build_relationship_context(
     relationship_ranking_attribute: str = "rank",
     column_delimiter: str = "|",
     context_name: str = "Relationships",
+    relationship_types: list[str] = [],
 ) -> tuple[str, pd.DataFrame]:
     """Prepare relationship data tables as context data for system prompt."""
     selected_relationships = _filter_relationships(
@@ -171,7 +172,8 @@ def build_relationship_context(
         top_k_relationships=top_k_relationships,
         relationship_ranking_attribute=relationship_ranking_attribute,
     )
-
+    filtered_objects = [rel for rel in selected_relationships if any(type in relationship_types for type in rel.attributes['type'])]
+    selected_relationships = filtered_objects.copy()
     if len(selected_entities) == 0 or len(selected_relationships) == 0:
         return "", pd.DataFrame()
 
@@ -226,6 +228,7 @@ def build_relationship_context(
         )
     else:
         record_df = pd.DataFrame()
+
 
     return current_context_text, record_df
 

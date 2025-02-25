@@ -22,7 +22,7 @@ If data is unavailable to answer the query, state: "Data not available to answer
 2. Output a JSON with:
    - `response`: Markdown-formatted answer.
    - `score`: Integer (0-100) rating how well the response answers the research question `{global_query}`.
-   - `follow_up_queries`: List of up to {num_followups} additional questions for further exploration.
+   - `follow_up_queries`: A list containing "Follow ups generation deprecated" repeated {num_followups} times.
 
 ---Data Tables---
 {context_data}
@@ -106,19 +106,21 @@ This is a unique knowledge graph where edges are freeform text rather than verb 
 1. score: How well the intermediate answer addresses the query. A score of 0 indicates a poor, unfocused answer, while a score of 100 indicates a highly focused, relevant answer that addresses the query in its entirety.
 
 2. intermediate_answer: Follow below instructions strictly while generating the answer:
--Answer question only from the given CONTEXT.
--Generate the response in paragraph format using all available information from the input data tables. Do not limit your response to top entities only. Do not provide unnecessary information, answer the query as it is
--Do not generate or extrapolate numbers or dates.
--Do not generate any new number based on the CONTEXT.
--Generate response only if information required for user's query is present in CONTEXT.
--ONLY answer the query with data that you are completely sure is correct.
--If the data is not available to answer the query, respond with: "Data not available to answer the query."
+- Answer question only from the given CONTEXT.
+- Generate the response in paragraph format using all available information from the input data tables. Do not limit your response to top entities only. Do not provide unnecessary information, answer the query as it is.
+- Do not generate or extrapolate numbers or dates.
+- Do not generate any new number based on the CONTEXT.
+- Generate response only if information required for user's query is present in CONTEXT.
+- ONLY answer the query with data that you are completely sure is correct.
+- If the data is not available to answer the query, respond with: "Data not available to answer the query."
+- Generate answer in markdown tabular format.
+- Only answer the query directly, do not generate any leading or trailing text as explanation.
 
-3. follow_up_queries: A list of follow-up queries that could be asked to further explore the topic. These should be formatted as a list of strings. Generate at least {num_followups} good follow-up queries, only if data is available in the summaries. If no data is available in summaries, generate the follow ups to be the original query. You may rephrase the original query in this case.
+3. follow_up_queries: A list containing "Follow ups generation deprecated" repeated {num_followups} times.
 
-Use only the data provided in the community summaries CONTEXT to generate the intermediate answer and follow-up queries.
+Use only the data provided in the community summaries CONTEXT to generate the intermediate answer.
 
-If the data is not available in the provided summaries, respond with "Data not available to answer the query" for the intermediate answer, set the score to 0, and do not generate any follow-up queries.
+If the data is not available in the provided summaries, respond with "Data not available to answer the query" for the intermediate answer, set the score to 0, and set follow_up_queries as ["Follow ups generation deprecated"] * {num_followups}.
 
 For the query:
 
@@ -126,8 +128,7 @@ For the query:
 
 The top-ranked community summaries as CONTEXT:
 
-{community_reports}      
-
+{community_reports}
 
 While forming intermediate answers do not include information not present in CONTEXT of community summaries. Do not include any entity, company or person not mentioned in CONTEXT.
 Provide the intermediate answer, and all scores in JSON format following:

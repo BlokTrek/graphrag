@@ -113,3 +113,7 @@ class DRIFTSearchConfig(BaseModel):
         description="To exclude any specific type of entity",
         default_factory=list,
     )
+    exclude_entity_names: list = Field(
+        description="To exclude any specific name of entity",
+        default_factory=list,
+    )

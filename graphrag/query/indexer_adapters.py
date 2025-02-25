@@ -68,7 +68,7 @@ def read_indexer_relationships(final_relationships: pd.DataFrame) -> list[Relati
         short_id_col="human_readable_id",
         rank_col="combined_degree",
         description_embedding_col=None,
-        attributes_cols=None,
+        attributes_cols=['type'],
     )
 
 

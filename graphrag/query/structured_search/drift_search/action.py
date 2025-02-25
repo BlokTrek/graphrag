@@ -67,9 +67,9 @@ class DriftAction:
         self : DriftAction
             Updated action with search results.
         """
-        # if self.is_complete:
-        #     log.warning("Action already complete. Skipping search.")
-        #     return self
+        if self.is_complete:
+            log.warning("Action already complete. Skipping search.")
+            return self
         if "num_followups" in kwargs:
             search_result = await search_engine.asearch(
                 drift_query=global_query, query=self.query, num_followups=kwargs["num_followups"], ner_entities=self.ner_entities
@@ -84,12 +84,11 @@ class DriftAction:
         try:
             response = json.loads(search_result.response)
         except json.JSONDecodeError:
-            error_message = "Failed to parse search response"
-            log.exception("%s: %s", error_message, search_result.response)
+            error_message = "Error decoding JSON"
+            log.error("%s: %s", error_message, self.query)
             # Do not launch exception as it will roll up with other steps
             # Instead return an empty response and let score -inf handle it
             response = {}
-
         self.answer = response.pop("response", None)
         self.score = response.pop("score", float("-inf"))
         self.metadata.update({"context_data": search_result.context_data})
@@ -102,8 +101,8 @@ class DriftAction:
         self.metadata["output_tokens"] += search_result.output_tokens
 
         self.follow_ups = response.pop("follow_up_queries", [])
-        if not self.follow_ups:
-            log.warning("No follow-up actions found for response: %s", response)
+        # if not self.follow_ups:
+        #     log.warning("No follow-up actions found for response: %s", response)
 
         if scorer:
             self.compute_score(scorer)

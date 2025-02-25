@@ -42,6 +42,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
     def __init__(
         self,
         llm: ChatOpenAI,
+        final_llm: ChatOpenAI,
         context_builder: DRIFTSearchContextBuilder,
         config: DRIFTSearchConfig | None = None,
         token_encoder: tiktoken.Encoding | None = None,
@@ -67,6 +68,7 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
         self.primer = DRIFTPrimer(
             config=self.config, chat_llm=llm, token_encoder=token_encoder
         )
+        self.final_llm = final_llm
         self.local_search = self.init_local_search(llms)
 
     def init_local_search(self, llms: list[ChatOpenAI]|None) -> list[LocalSearch]:
@@ -97,15 +99,16 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             "response_format": {"type": "json_object"},
         }
         local_llms = llms if llms else [self.llm]
-
         return [LocalSearch(
             llm=_llm,
+            final_llm=self.final_llm,
             system_prompt=self.context_builder.local_system_prompt,
             context_builder=self.context_builder.local_mixed_context,
             token_encoder=self.token_encoder,
             llm_params=llm_params,
             context_builder_params=local_context_params,
             response_type="markdown tabular",
+            exclude_entity_names=self.config.exclude_entity_names,
         ) for _llm in local_llms]
 
     def _process_primer_results(
@@ -139,9 +142,8 @@ class DRIFTSearch(BaseSearch[DRIFTSearchContextBuilder]):
             intermediate_answer = "\n\n".join([
                 i["intermediate_answer"] for i in response if "intermediate_answer" in i
             ])
-
-            follow_ups = list(set([fu for i in response for fu in i.get("follow_up_queries", [])]))
-
+            
+            follow_ups = list(set([fu + " " for i in response for fu in i.get("follow_up_queries", [])]))
             if not follow_ups:
                 error_msg = "No follow-up queries found in primer response. Ensure that the primer response includes follow-up queries."
                 raise RuntimeError(error_msg)

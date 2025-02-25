@@ -171,9 +171,9 @@ def build_relationship_context(
         relationships=relationships,
         top_k_relationships=top_k_relationships,
         relationship_ranking_attribute=relationship_ranking_attribute,
+        relationship_types=relationship_types,
     )
-    filtered_objects = [rel for rel in selected_relationships if any(type in relationship_types for type in rel.attributes['type'])]
-    selected_relationships = filtered_objects.copy()
+
     if len(selected_entities) == 0 or len(selected_relationships) == 0:
         return "", pd.DataFrame()
 
@@ -239,6 +239,7 @@ def _filter_relationships(
     relationships: list[Relationship],
     top_k_relationships: int = 10,
     relationship_ranking_attribute: str = "rank",
+    relationship_types: list[str] = [],
 ) -> list[Relationship]:
     """Filter and sort relationships based on a set of selected entities and a ranking attribute."""
     # First priority: in-network relationships (i.e. relationships between selected entities)
@@ -247,6 +248,7 @@ def _filter_relationships(
         relationships=relationships,
         ranking_attribute=relationship_ranking_attribute,
     )
+    in_network_relationships = [rel for rel in in_network_relationships if any(type in relationship_types for type in rel.attributes['type'])]
 
     # Second priority -  out-of-network relationships
     # (i.e. relationships between selected entities and other entities that are not within the selected entities)
@@ -255,6 +257,7 @@ def _filter_relationships(
         relationships=relationships,
         ranking_attribute=relationship_ranking_attribute,
     )
+    out_network_relationships = [rel for rel in out_network_relationships if any(type in relationship_types for type in rel.attributes['type'])]
     if len(out_network_relationships) <= 1:
         return in_network_relationships + out_network_relationships
 

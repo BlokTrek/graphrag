@@ -173,3 +173,32 @@ class MilvusVectorStore(BaseVectorStore):
         if query_embedding:
             return self.similarity_search_by_vector(query_embedding, k, filter)
         return []
+    
+    ####new function 
+    def string_search_by_text(self, entity_type, entity_name, perform_search_on, filter) -> list[str]:
+
+        if entity_type not in perform_search_on:
+            return []
+        
+        results = self.db_connection.query(
+            collection_name=self.collection_name,
+            filter=filter,
+            output_fields=["*"],
+            limit=100,
+        )
+
+        # all_results = self.db_connection.query(
+        #     collection_name=self.collection_name,
+        #     filter="", 
+        #     output_fields=["*"],
+        #     limit=100,
+        # )
+
+        # end_with_Founder = [r for r in all_results if (r["title"].upper()).endswith(entity_name.upper())]
+        final_results = results #+ end_with_Founder
+
+        processed_results = [
+            {"entity_type": result["entity_type"], "title": result["title"]}
+            for result in final_results if "entity_type" in result and "title" in result
+        ]
+        return processed_results

@@ -4,35 +4,43 @@
 """DRIFT Search prompts."""
 
 DRIFT_LOCAL_SYSTEM_PROMPT = """
----Role---
-You are a helpful assistant responding to questions about data in the provided tables.
+---Role---  
+You are a helpful assistant responding to questions about data in the provided tables.  
 
----Goal---
-Your task is to summarize the input data tables to answer the user's question in the specified response length and format. Incorporate relevant general knowledge where appropriate.
+---Goal---  
+Your task is to answer the user's question **only using** information from the provided data tables.  
 
-- Support points with references from the data:
-  "This is an example supported by data [Data: <dataset name> (record ids); <dataset name> (record ids)]."
-- Include at most 5 record ids per reference. If there are more, append "+more."
-  Example: "Data: Sources (1, 2, 3, 4, 5+more)."
+---General Instructions---  
+1. Validate all conditions in the user query before selecting relevant data.  
+2. If all conditions match exactly, provide the specific data point. Otherwise, respond with "Data not available to answer the query."  
+3. Maintain JSON output formatting strictly.  
+4. Focus on the most relevant data, especially from the provided tables.  
+5. Competitor relationships are **bidirectional**. If Uber is a competitor of Ola, then Ola is also a competitor of Uber.  
 
-If data is unavailable to answer the query, state: "Data not available to answer the query."
+Now, answer the user query based on the specific instructions and data provided in the user prompt.  
+"""
 
----Response Format---
-1. Provide a response in markdown format: {response_type}.
-2. Output a JSON with:
-   - `response`: Markdown-formatted answer.
-   - `score`: Integer (0-100) rating how well the response answers the research question `{global_query}`.
-   - `follow_up_queries`: A list containing "Follow ups generation deprecated" repeated {num_followups} times.
-
----Data Tables---
+DRIFT_LOCAL_USER_PROMPT = """
+---Data Tables---  
 {context_data}
 
----Instructions---
-1. Focus on the most relevant data, especially from the Sources table.
-2. Use all relevant information but avoid exceeding token limits.
-3. Maintain JSON output formatting strictly.
+---Query-Specific Instructions---  
+1. Ensure that all query conditions match exactly before selecting relevant data.  
+2. If all conditions match, return the specific data point(s). Otherwise, respond with "Data not available to answer the query."  
+3. Competitor relationships are **bidirectional**. If Uber is a competitor of Ola, then Ola is also a competitor of Uber.  
 
+---Response Format---  
+- Response type: {response_type}  
+- Output a JSON with:  
+  - response: A Markdown-formatted answer strictly based on the provided tables.  
+  - score: Integer (0-100) rating how well the response answers the research question.  
+  - follow_up_queries: A list containing "Follow ups generation deprecated" repeated 1 time.  
+
+---User Query---  
+{query}
 """
+
+
 
 
 DRIFT_REDUCE_PROMPT = """

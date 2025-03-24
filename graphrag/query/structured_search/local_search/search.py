@@ -14,6 +14,9 @@ import tiktoken
 from graphrag.prompts.query.local_search_system_prompt import (
     LOCAL_SEARCH_SYSTEM_PROMPT,
 )
+from graphrag.prompts.query.drift_search_system_prompt import (
+    DRIFT_LOCAL_USER_PROMPT,
+)
 from graphrag.query.context_builder.builders import LocalContextBuilder
 from graphrag.query.context_builder.conversation_history import (
     ConversationHistory,
@@ -85,20 +88,21 @@ class LocalSearch(BaseSearch[LocalContextBuilder]):
             if "drift_query" in kwargs:
                 drift_query = kwargs["drift_query"]
                 num_followups = kwargs["num_followups"]
-                search_prompt = self.system_prompt.format(
+                system_prompt = self.system_prompt
+                user_prompt = DRIFT_LOCAL_USER_PROMPT.format(
                     context_data=context_result.context_chunks,
                     response_type=self.response_type,
-                    global_query=drift_query,
-                    num_followups=num_followups,
+                    query=query,
                 )
             else:
-                search_prompt = self.system_prompt.format(
+                search_prompt = DRIFT_LOCAL_USER_PROMPT.format(
                     context_data=context_result.context_chunks,
                     response_type=self.response_type,
+                    query=query,
                 )
             search_messages = [
-                {"role": "system", "content": search_prompt},
-                {"role": "user", "content": query},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ]
             try:
                 response = await self.final_llm.agenerate(
@@ -107,6 +111,7 @@ class LocalSearch(BaseSearch[LocalContextBuilder]):
                     callbacks=self.callbacks,
                     **self.llm_params,
                 )
+                import pdb; pdb.set_trace()
             except httpx.ReadTimeout as e:
                 log.error(f"HTTP request timed out from Graph Route for query: {query}", exc_info=False)
                 print("ReadTimeout: The request took too long to respond.")

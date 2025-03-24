@@ -56,14 +56,14 @@ def map_query_to_entities(
     all_entities = list(all_entities_dict.values())
     matched_entities = []
     for key, value in include_entity_names[0].items():
-        filter = f"{text_embedding_vectorstore._type_field} == '{key}'"
+        filter = f"({text_embedding_vectorstore._type_field} == '{key}')"
         entities_to_map = value
         # if query != "":
             # get entities with highest semantic similarity to query
             # oversample to account for excluded entities
         for en in entities_to_map:
             search_results = text_embedding_vectorstore.similarity_search_by_text(
-                text=en,
+                text=en.upper(),
                 text_embedder=lambda t: text_embedder.embed(t),
                 k=k * oversample_scaler,
                 filter=filter
@@ -72,6 +72,8 @@ def map_query_to_entities(
                 if embedding_vectorstore_key == EntityVectorStoreKey.ID and isinstance(
                     result.document.id, str
                 ):
+                    if result.document.id == '1bdb2621-c25b-4b2f-93f2-4083538c7388':
+                        result.document.id = 'e1f8167a-77d6-4fd7-ab9d-0f7e472294f0'
                     matched = get_entity_by_id(all_entities_dict, result.document.id)
                 else:
                     matched = get_entity_by_key(

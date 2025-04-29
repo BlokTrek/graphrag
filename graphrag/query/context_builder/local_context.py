@@ -155,6 +155,7 @@ def build_covariates_context(
 def build_relationship_context(
     selected_entities: list[Entity],
     relationships: list[Relationship],
+    entity_filter: list[str],  # New parameter to filter by source/target
     token_encoder: tiktoken.Encoding | None = None,
     include_relationship_weight: bool = False,
     max_tokens: int = 8000,
@@ -162,6 +163,7 @@ def build_relationship_context(
     relationship_ranking_attribute: str = "rank",
     column_delimiter: str = "|",
     context_name: str = "Relationships",
+    relationship_types: list[str] = [],
 ) -> tuple[str, pd.DataFrame]:
     """Prepare relationship data tables as context data for system prompt."""
     selected_relationships = _filter_relationships(
@@ -169,6 +171,7 @@ def build_relationship_context(
         relationships=relationships,
         top_k_relationships=top_k_relationships,
         relationship_ranking_attribute=relationship_ranking_attribute,
+        relationship_types=relationship_types,
     )
 
     if len(selected_entities) == 0 or len(selected_relationships) == 0:
@@ -192,6 +195,10 @@ def build_relationship_context(
 
     all_context_records = [header]
     for rel in selected_relationships:
+        if entity_filter:
+            if rel.source not in entity_filter and rel.target not in entity_filter:
+                continue  # Skip rows that don't match the entity filter
+        
         new_context = [
             rel.short_id if rel.short_id else "",
             rel.source,
@@ -222,7 +229,9 @@ def build_relationship_context(
     else:
         record_df = pd.DataFrame()
 
+
     return current_context_text, record_df
+
 
 
 def _filter_relationships(
@@ -230,6 +239,7 @@ def _filter_relationships(
     relationships: list[Relationship],
     top_k_relationships: int = 10,
     relationship_ranking_attribute: str = "rank",
+    relationship_types: list[str] = [],
 ) -> list[Relationship]:
     """Filter and sort relationships based on a set of selected entities and a ranking attribute."""
     # First priority: in-network relationships (i.e. relationships between selected entities)
@@ -238,6 +248,7 @@ def _filter_relationships(
         relationships=relationships,
         ranking_attribute=relationship_ranking_attribute,
     )
+    in_network_relationships = [rel for rel in in_network_relationships if any(type in relationship_types for type in rel.attributes['type'])]
 
     # Second priority -  out-of-network relationships
     # (i.e. relationships between selected entities and other entities that are not within the selected entities)
@@ -246,6 +257,7 @@ def _filter_relationships(
         relationships=relationships,
         ranking_attribute=relationship_ranking_attribute,
     )
+    out_network_relationships = [rel for rel in out_network_relationships if any(type in relationship_types for type in rel.attributes['type'])]
     if len(out_network_relationships) <= 1:
         return in_network_relationships + out_network_relationships
 

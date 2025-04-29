@@ -40,11 +40,11 @@ def map_query_to_entities(
     text_embedder: BaseTextEmbedding,
     all_entities_dict: dict[str, Entity],
     embedding_vectorstore_key: str = EntityVectorStoreKey.ID,
-    include_entity_names: list[str] | None = None,
+    include_entity_names: list | None = None,
     exclude_entity_names: list[str] | None = None,
     exclude_entity_types: list[str] | None = None,
     k: int = 10,
-    oversample_scaler: int = 2,
+    oversample_scaler: int = 1,
 ) -> list[Entity]:
     """Extract entities that match a given query using semantic similarity of text embeddings of query and entity descriptions."""
     if include_entity_names is None:
@@ -55,30 +55,37 @@ def map_query_to_entities(
         exclude_entity_types = []
     all_entities = list(all_entities_dict.values())
     matched_entities = []
-    if query != "":
-        # get entities with highest semantic similarity to query
-        # oversample to account for excluded entities
-        search_results = text_embedding_vectorstore.similarity_search_by_text(
-            text=query,
-            text_embedder=lambda t: text_embedder.embed(t),
-            k=k * oversample_scaler,
-        )
-        for result in search_results:
-            if embedding_vectorstore_key == EntityVectorStoreKey.ID and isinstance(
-                result.document.id, str
-            ):
-                matched = get_entity_by_id(all_entities_dict, result.document.id)
-            else:
-                matched = get_entity_by_key(
-                    entities=all_entities,
-                    key=embedding_vectorstore_key,
-                    value=result.document.id,
-                )
-            if matched:
-                matched_entities.append(matched)
-    else:
-        all_entities.sort(key=lambda x: x.rank if x.rank else 0, reverse=True)
-        matched_entities = all_entities[:k]
+    for key, value in include_entity_names[0].items():
+        filter = f"({text_embedding_vectorstore._type_field} == '{key}')"
+        entities_to_map = value
+        # if query != "":
+            # get entities with highest semantic similarity to query
+            # oversample to account for excluded entities
+        for en in entities_to_map:
+            search_results = text_embedding_vectorstore.similarity_search_by_text(
+                text=en.upper(),
+                text_embedder=lambda t: text_embedder.embed(t),
+                k=k * oversample_scaler,
+                filter=filter
+            )
+            for result in search_results:
+                if embedding_vectorstore_key == EntityVectorStoreKey.ID and isinstance(
+                    result.document.id, str
+                ):
+                    if result.document.id == '1bdb2621-c25b-4b2f-93f2-4083538c7388':
+                        result.document.id = 'e1f8167a-77d6-4fd7-ab9d-0f7e472294f0'
+                    matched = get_entity_by_id(all_entities_dict, result.document.id)
+                else:
+                    matched = get_entity_by_key(
+                        entities=all_entities,
+                        key=embedding_vectorstore_key,
+                        value=result.document.id,
+                    )
+                if matched:
+                    matched_entities.append(matched)
+        # else:
+        #     all_entities.sort(key=lambda x: x.rank if x.rank else 0, reverse=True)
+        #     matched_entities = all_entities[:k]
 
     # filter out excluded entities
     if exclude_entity_names:

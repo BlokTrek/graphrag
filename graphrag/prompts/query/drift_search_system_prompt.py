@@ -4,35 +4,43 @@
 """DRIFT Search prompts."""
 
 DRIFT_LOCAL_SYSTEM_PROMPT = """
----Role---
-You are a helpful assistant responding to questions about data in the provided tables.
+---Role---  
+You are a helpful assistant responding to questions about data in the provided tables.  
 
----Goal---
-Your task is to summarize the input data tables to answer the user's question in the specified response length and format. Incorporate relevant general knowledge where appropriate.
+---Goal---  
+Your task is to answer the user's question **only using** information from the provided data tables.  
 
-- Support points with references from the data:
-  "This is an example supported by data [Data: <dataset name> (record ids); <dataset name> (record ids)]."
-- Include at most 5 record ids per reference. If there are more, append "+more."
-  Example: "Data: Sources (1, 2, 3, 4, 5+more)."
+---General Instructions---  
+1. Validate all conditions in the user query before selecting relevant data.  
+2. If all conditions match exactly, provide the specific data point. Otherwise, respond with "Data not available to answer the query."  
+3. Maintain JSON output formatting strictly.  
+4. Focus on the most relevant data, especially from the provided tables.  
+5. Competitor relationships are **bidirectional**. If Uber is a competitor of Ola, then Ola is also a competitor of Uber.  
 
-If data is unavailable to answer the query, state: "Data not available to answer the query."
+Now, answer the user query based on the specific instructions and data provided in the user prompt.  
+"""
 
----Response Format---
-1. Provide a response in markdown format: {response_type}.
-2. Output a JSON with:
-   - `response`: Markdown-formatted answer.
-   - `score`: Integer (0-100) rating how well the response answers the research question `{global_query}`.
-   - `follow_up_queries`: List of up to {num_followups} additional questions for further exploration.
-
----Data Tables---
+DRIFT_LOCAL_USER_PROMPT = """
+---Data Tables---  
 {context_data}
 
----Instructions---
-1. Focus on the most relevant data, especially from the Sources table.
-2. Use all relevant information but avoid exceeding token limits.
-3. Maintain JSON output formatting strictly.
+---Query-Specific Instructions---  
+1. Ensure that all query conditions match exactly before selecting relevant data.  
+2. If all conditions match, return the specific data point(s). Otherwise, respond with "Data not available to answer the query."  
+3. Competitor relationships are **bidirectional**. If Uber is a competitor of Ola, then Ola is also a competitor of Uber.  
 
+---Response Format---  
+- Response type: {response_type}  
+- Output a JSON with:  
+  - response: A Markdown-formatted answer strictly based on the provided tables.  
+  - score: Integer (0-100) rating how well the response answers the research question.  
+  - follow_up_queries: A list containing "Follow ups generation deprecated" repeated 1 time.  
+
+---User Query---  
+{query}
 """
+
+
 
 
 DRIFT_REDUCE_PROMPT = """
@@ -106,19 +114,21 @@ This is a unique knowledge graph where edges are freeform text rather than verb 
 1. score: How well the intermediate answer addresses the query. A score of 0 indicates a poor, unfocused answer, while a score of 100 indicates a highly focused, relevant answer that addresses the query in its entirety.
 
 2. intermediate_answer: Follow below instructions strictly while generating the answer:
--Answer question only from the given CONTEXT.
--Generate the response in paragraph format using all available information from the input data tables. Do not limit your response to top entities only. Do not provide unnecessary information, answer the query as it is
--Do not generate or extrapolate numbers or dates.
--Do not generate any new number based on the CONTEXT.
--Generate response only if information required for user's query is present in CONTEXT.
--ONLY answer the query with data that you are completely sure is correct.
--If the data is not available to answer the query, respond with: "Data not available to answer the query."
+- Answer question only from the given CONTEXT.
+- Generate the response in paragraph format using all available information from the input data tables. Do not limit your response to top entities only. Do not provide unnecessary information, answer the query as it is.
+- Do not generate or extrapolate numbers or dates.
+- Do not generate any new number based on the CONTEXT.
+- Generate response only if information required for user's query is present in CONTEXT.
+- ONLY answer the query with data that you are completely sure is correct.
+- If the data is not available to answer the query, respond with: "Data not available to answer the query."
+- Generate answer in markdown tabular format.
+- Only answer the query directly, do not generate any leading or trailing text as explanation.
 
-3. follow_up_queries: A list of follow-up queries that could be asked to further explore the topic. These should be formatted as a list of strings. Generate at least {num_followups} good follow-up queries, only if data is available in the summaries. If no data is available in summaries, generate the follow ups to be the original query. You may rephrase the original query in this case.
+3. follow_up_queries: A list containing "Follow ups generation deprecated" repeated {num_followups} times.
 
-Use only the data provided in the community summaries CONTEXT to generate the intermediate answer and follow-up queries.
+Use only the data provided in the community summaries CONTEXT to generate the intermediate answer.
 
-If the data is not available in the provided summaries, respond with "Data not available to answer the query" for the intermediate answer, set the score to 0, and do not generate any follow-up queries.
+If the data is not available in the provided summaries, respond with "Data not available to answer the query" for the intermediate answer, set the score to 0, and set follow_up_queries as ["Follow ups generation deprecated"] * {num_followups}.
 
 For the query:
 
@@ -126,8 +136,7 @@ For the query:
 
 The top-ranked community summaries as CONTEXT:
 
-{community_reports}      
-
+{community_reports}
 
 While forming intermediate answers do not include information not present in CONTEXT of community summaries. Do not include any entity, company or person not mentioned in CONTEXT.
 Provide the intermediate answer, and all scores in JSON format following:

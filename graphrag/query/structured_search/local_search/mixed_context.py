@@ -128,7 +128,6 @@ class LocalSearchMixedContext(LocalContextBuilder):
                 "The sum of community_prop and text_unit_prop should not exceed 1."
             )
             raise ValueError(value_error)
-
         # map user query to entities
         # if there is conversation history, attached the previous user questions to the current query
         if conversation_history:
@@ -136,6 +135,8 @@ class LocalSearchMixedContext(LocalContextBuilder):
                 conversation_history.get_user_turns(conversation_history_max_turns)
             )
             query = f"{query}\n{pre_user_questions}"
+
+        include_entity_names = [kwargs.get('ner_entities', [])[0]]
 
         selected_entities = map_query_to_entities(
             query=query,
@@ -147,9 +148,9 @@ class LocalSearchMixedContext(LocalContextBuilder):
             exclude_entity_names=exclude_entity_names,
             exclude_entity_types=exclude_entity_types,
             k=top_k_mapped_entities,
-            oversample_scaler=2,
+            oversample_scaler=1,
         )
-
+        selected_entities = [en for en in selected_entities if en.title not in exclude_entity_names]
         # build context
         final_context = list[str]()
         final_context_data = dict[str, pd.DataFrame]()
@@ -172,7 +173,6 @@ class LocalSearchMixedContext(LocalContextBuilder):
                 max_tokens = max_tokens - num_tokens(
                     conversation_history_context, self.token_encoder
                 )
-
         # build community context
         community_tokens = max(int(max_tokens * community_prop), 0)
         community_context, community_context_data = self._build_community_context(
@@ -192,6 +192,10 @@ class LocalSearchMixedContext(LocalContextBuilder):
         # build local (i.e. entity-relationship-covariate) context
         local_prop = 1 - community_prop - text_unit_prop
         local_tokens = max(int(max_tokens * local_prop), 0)
+        helper_data = kwargs.get('ner_entities', [])
+        if helper_data:
+            relationship_types = list(set([item for sublist in helper_data[2].values() for item in sublist]))
+            response_entities = list(set([item for sublist in helper_data[1].values() for item in sublist]))
         local_context, local_context_data = self._build_local_context(
             selected_entities=selected_entities,
             max_tokens=local_tokens,
@@ -202,6 +206,8 @@ class LocalSearchMixedContext(LocalContextBuilder):
             relationship_ranking_attribute=relationship_ranking_attribute,
             return_candidate_context=return_candidate_context,
             column_delimiter=column_delimiter,
+            response_entities=response_entities,
+            relationship_types=relationship_types
         )
         if local_context.strip() != "":
             final_context.append(str(local_context))
@@ -387,6 +393,8 @@ class LocalSearchMixedContext(LocalContextBuilder):
         relationship_ranking_attribute: str = "rank",
         return_candidate_context: bool = False,
         column_delimiter: str = "|",
+        response_entities: list[str] = [],
+        relationship_types: list[str] = [],
     ) -> tuple[str, dict[str, pd.DataFrame]]:
         """Build data context for local search prompt combining entity/relationship/covariate tables."""
         # build entity context
@@ -405,7 +413,6 @@ class LocalSearchMixedContext(LocalContextBuilder):
         added_entities = []
         final_context = []
         final_context_data = {}
-
         (
             relationship_context,
             relationship_context_data,
@@ -419,6 +426,8 @@ class LocalSearchMixedContext(LocalContextBuilder):
             include_relationship_weight=include_relationship_weight,
             relationship_ranking_attribute=relationship_ranking_attribute,
             context_name="Relationships",
+            entity_filter=response_entities,
+            relationship_types=relationship_types,
         )
         final_context.append(relationship_context)
         final_context_data["relationships"] = relationship_context_data

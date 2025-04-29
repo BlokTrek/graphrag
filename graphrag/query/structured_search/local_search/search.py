@@ -7,11 +7,15 @@ import logging
 import time
 from collections.abc import AsyncGenerator
 from typing import Any
+import httpx
 
 import tiktoken
 
 from graphrag.prompts.query.local_search_system_prompt import (
     LOCAL_SEARCH_SYSTEM_PROMPT,
+)
+from graphrag.prompts.query.drift_search_system_prompt import (
+    DRIFT_LOCAL_USER_PROMPT,
 )
 from graphrag.query.context_builder.builders import LocalContextBuilder
 from graphrag.query.context_builder.conversation_history import (
@@ -35,6 +39,7 @@ class LocalSearch(BaseSearch[LocalContextBuilder]):
     def __init__(
         self,
         llm: BaseLLM,
+        final_llm: BaseLLM,
         context_builder: LocalContextBuilder,
         token_encoder: tiktoken.Encoding | None = None,
         system_prompt: str | None = None,
@@ -42,6 +47,7 @@ class LocalSearch(BaseSearch[LocalContextBuilder]):
         callbacks: list[BaseLLMCallback] | None = None,
         llm_params: dict[str, Any] = DEFAULT_LLM_PARAMS,
         context_builder_params: dict | None = None,
+        exclude_entity_names: list | None = None,
     ):
         super().__init__(
             llm=llm,
@@ -50,9 +56,11 @@ class LocalSearch(BaseSearch[LocalContextBuilder]):
             llm_params=llm_params,
             context_builder_params=context_builder_params or {},
         )
+        self.final_llm = final_llm
         self.system_prompt = system_prompt or LOCAL_SEARCH_SYSTEM_PROMPT
         self.callbacks = callbacks
         self.response_type = response_type
+        self.exclude_entity_names = exclude_entity_names
 
     async def asearch(
         self,
@@ -66,6 +74,7 @@ class LocalSearch(BaseSearch[LocalContextBuilder]):
         llm_calls, prompt_tokens, output_tokens = {}, {}, {}
         context_result = self.context_builder.build_context(
             query=query,
+            exclude_entity_names=self.exclude_entity_names,
             conversation_history=conversation_history,
             **kwargs,
             **self.context_builder_params,
@@ -79,28 +88,38 @@ class LocalSearch(BaseSearch[LocalContextBuilder]):
             if "drift_query" in kwargs:
                 drift_query = kwargs["drift_query"]
                 num_followups = kwargs["num_followups"]
-                search_prompt = self.system_prompt.format(
+                system_prompt = self.system_prompt
+                user_prompt = DRIFT_LOCAL_USER_PROMPT.format(
                     context_data=context_result.context_chunks,
                     response_type=self.response_type,
-                    global_query=drift_query,
-                    num_followups=num_followups,
+                    query=query,
                 )
             else:
-                search_prompt = self.system_prompt.format(
+                search_prompt = DRIFT_LOCAL_USER_PROMPT.format(
                     context_data=context_result.context_chunks,
                     response_type=self.response_type,
+                    query=query,
                 )
             search_messages = [
-                {"role": "system", "content": search_prompt},
-                {"role": "user", "content": query},
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt},
             ]
-
-            response = await self.llm.agenerate(
-                messages=search_messages,
-                streaming=True,
-                callbacks=self.callbacks,
-                **self.llm_params,
-            )
+            try:
+                response = await self.final_llm.agenerate(
+                    messages=search_messages,
+                    streaming=True,
+                    callbacks=self.callbacks,
+                    **self.llm_params,
+                )
+                import pdb; pdb.set_trace()
+            except httpx.ReadTimeout as e:
+                log.error(f"HTTP request timed out from Graph Route for query: {query}", exc_info=False)
+                print("ReadTimeout: The request took too long to respond.")
+                response = ''
+            except Exception as e:
+                log.exception(f"An unexpected error occurred: {e}")
+                print(f"Found exception: {e}")
+                response = ''
             llm_calls["response"] = 1
             prompt_tokens["response"] = num_tokens(search_prompt, self.token_encoder)
             output_tokens["response"] = num_tokens(response, self.token_encoder)
